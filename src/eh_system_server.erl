@@ -225,14 +225,16 @@ handle_info(Msg,
                                 {_, ?EH_NOT_READY, true, _} ->
                                   process_snapshot_request(NewReplRing, ReplRingOrder, NewSucc, NewState1);
                                 {_, ?EH_READY, true, false} ->
-                                  send_down_msg(fun eh_node_timestamp:no_persist_data/2,
+                                  send_down_msg(?EH_PRED_PRE_UPDATE,
+                                                fun eh_node_timestamp:no_persist_data/2,
                                                 fun send_pre_update_msg/4,
                                                 fun eh_node_timestamp:persist_data/2,
                                                 fun send_update_msg/4,
                                                 PreMsgData,
                                                 NewState1);
                                 {_, ?EH_READY, false, true} ->
-                                  send_down_msg(fun eh_node_timestamp:no_persist_data/2,
+                                  send_down_msg(?EH_SUCC_UPDATE,
+                                                fun eh_node_timestamp:no_persist_data/2,
                                                 fun send_update_msg/4,
 						fun eh_node_timestamp:no_persist_data/2,
 					        fun reply_to_client/4,
@@ -360,21 +362,25 @@ process_down_msg(#eh_system_state{pre_msg_data=PreMsgData, msg_data=MsgData}=Sta
   State2 = process_down_msg(fun eh_node_timestamp:no_persist_data/2, MsgData, State1),
   State2#eh_system_state{pre_msg_data=eh_system_util:new_map(), msg_data=eh_system_util:new_map(), completed_set=eh_system_util:new_set()}.
   
-send_down_msg(PersistRingFun,
+send_down_msg(Tag,
+              PersistRingFun,
               RingFun,
               PersistReturnFun,
               ReturnFun,
               UMsgList,
               CompletedSet,
               State) ->
-  case eh_node_timestamp:msg_state(UMsgList, State) of
-    ?EH_RING_MSG ->
-      RingFun(PersistRingFun, UMsgList, CompletedSet, State);
-    _            ->
-      ReturnFun(PersistReturnFun, UMsgList, CompletedSet, State)
+  case {Tag, eh_node_timestamp:msg_state(UMsgList, State)} of
+    {?EH_PRED_PRE_UPDATE, ?EH_TAIL_MSG} ->
+      ReturnFun(PersistReturnFun, UMsgList, CompletedSet, State);
+    {?EH_SUCC_UPDATE, ?EH_HEAD_MSG}     ->
+      ReturnFun(PersistReturnFun, UMsgList, CompletedSet, State);
+    {_, _}                              ->
+      RingFun(PersistRingFun, UMsgList, CompletedSet, State)
   end.
 
-send_down_msg(PersistRingFun,
+send_down_msg(Tag,
+              PersistRingFun,
               RingFun,
               PersistReturnFun,
               ReturnFun,
@@ -382,7 +388,7 @@ send_down_msg(PersistRingFun,
               State) ->
   CompletedSet = eh_system_util:new_set(),
   MsgList = eh_update_msg:get_map_msg_list(MsgMap),
-  lists:foldl(fun({_, UMsgList}, StateX) -> send_down_msg(PersistRingFun, RingFun, PersistReturnFun, ReturnFun, UMsgList, CompletedSet, StateX) end, State, MsgList).
+  lists:foldl(fun({_, UMsgList}, StateX) -> send_down_msg(Tag, PersistRingFun, RingFun, PersistReturnFun, ReturnFun, UMsgList, CompletedSet, StateX) end, State, MsgList).
 
 
 
