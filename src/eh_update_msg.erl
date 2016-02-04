@@ -25,6 +25,8 @@
          get_msg_key_list/1,
          get_map_msg_list/1,
          exist_map_msg/3,
+         exist_msg_key/2,
+         exist_msg_list/2,
          filter_node_id/2,
          partition_on_timestamp_node_id/3,
          add_list_to_map/2]).
@@ -35,7 +37,15 @@ get_msg_key_list(UMsgList) ->
   lists:map(fun({UMsgKey, _}) -> UMsgKey end, UMsgList).
 
 get_map_msg_list(Map) ->
-  maps:fold(fun(K, V, Acc) -> [{K, V} | Acc] end, [], Map).
+  ListMap = eh_system_util:fold_map(fun(#eh_update_msg_key{timestamp=Timestamp}=UMsgKey, #eh_update_msg_data{node_id=NodeId}=UMsgData, ListMapX) -> 
+                                    List1 = case maps:find({Timestamp, NodeId}, ListMapX) of
+                                              error      ->
+                                                [];
+                                              {ok, List} ->
+                                                List
+                                            end,
+                                    maps:put({Timestamp, NodeId}, [{UMsgKey, UMsgData} | List1], ListMapX) end, maps:new(), Map),
+  maps:to_list(ListMap).
 
 get_msg(MsgList, Timestamp, From, NodeId, Ref) ->
   get_msg(MsgList, Timestamp, From, NodeId, Ref, []).
@@ -85,6 +95,22 @@ exist_map_msg(ObjectType, ObjectId, Map) ->
                   Other
               end end, undefined, Map).
  
+exist_msg_key(UMsgKey, Map) ->
+  case eh_system_util:find_map(UMsgKey, Map) of
+    error          ->
+      #eh_update_msg_data{};
+    {ok, UMsgData} ->
+      UMsgData
+  end.
+
+exist_msg_list(UMsgList, Map) ->
+  lists:foldl(fun({UMsgKey, _}, UMsgData) -> case UMsgData#eh_update_msg_data.node_id of
+                                               undefined ->
+                                                 exist_msg_key(UMsgKey, Map);
+                                               _         ->
+                                                 UMsgData
+                                             end end, #eh_update_msg_data{}, UMsgList).
+
 filter_node_id(NodeId, Map) ->
   eh_system_util:filter_map(fun(_K, #eh_update_msg_data{node_id=MsgNodeId}) -> NodeId =:= MsgNodeId end, Map).
 

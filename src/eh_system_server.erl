@@ -67,25 +67,21 @@ handle_cast({?EH_ADD_NODE, {Node, NodeList, NodeOrderList}},
   FailureDetector = eh_system_config:get_failure_detector(AppConfig),
   NodeOrder = eh_system_config:get_node_order(AppConfig),
   NodeId = eh_system_config:get_node_id(AppConfig),
-  {NodeList1, NodeOrderList1, Pred1, Succ1} = eh_repl_ring:get_ordered_list(NodeId, NodeList, NodeOrderList, NodeOrder),
-  NewState2 = case eh_node_timestamp:valid_add_node_msg(Node, State) of
+  {NodeList1, NodeOrderList1, Pred1, Succ1} = eh_repl_ring:get_ordered_list_pred_succ(NodeId, NodeList, NodeOrderList, NodeOrder),
+  NewState9 = case eh_node_timestamp:valid_add_node_msg(Node, State) of
                 ?EH_VALID_FOR_NEW      ->
-                  UniqueIdGenerator = eh_system_config:get_unique_id_generator(AppConfig),
-                  Ref = UniqueIdGenerator:unique_id(),
-                  ReplDataManager = eh_system_config:get_repl_data_manager(AppConfig),
+                  NewState1 = process_snapshot_request(NodeList1, NodeOrderList1, Succ1, State),
                   FailureDetector:set(Node, NodeList1),
-                  {Timestamp, Snapshot} = ReplDataManager:timestamp(),
-                  gen_server:cast({?EH_SYSTEM_SERVER, Succ1}, {?EH_SNAPSHOT, {Node, NodeList, NodeOrderList, Ref, {Timestamp, Snapshot}}}),
-                  NewState1 = eh_node_state:update_state_transient(State),
-                  NewState1#eh_system_state{repl_ring_order=NodeOrderList1, repl_ring=NodeList1, predecessor=Pred1, successor=Succ1, snapshot_ref=Ref};
+                  NewState2 = eh_node_state:update_state_transient(NewState1),
+                  NewState2#eh_system_state{repl_ring_order=NodeOrderList1, repl_ring=NodeList1, predecessor=Pred1, successor=Succ1};
                 ?EH_VALID_FOR_EXISTING -> 
                   FailureDetector:set(Node),
                   State#eh_system_state{repl_ring_order=NodeOrderList1, repl_ring=NodeList1, predecessor=Pred1, successor=Succ1};
                 _                      ->
                   State
               end,
-  event_state("add_node.99", NewState2),
-  {noreply, NewState2};
+  event_state("add_node.99", NewState9),
+  {noreply, NewState9};
 
 handle_cast({?EH_SNAPSHOT, {Node, NodeList, NodeOrderList,  Ref, {Timestamp, Snapshot}}}, 
             #eh_system_state{pre_msg_data=PreMsgData, app_config=AppConfig}=State) ->
@@ -211,25 +207,42 @@ handle_cast(_Msg, State) ->
   {noreply, State}.
 
 
-handle_info(Msg, #eh_system_state{repl_ring=ReplRing, successor=Succ, app_config=AppConfig}=State) ->
+handle_info(Msg, 
+            #eh_system_state{repl_ring=ReplRing, repl_ring_order=ReplRingOrder, predecessor=Pred, successor=Succ, pre_msg_data=PreMsgData, msg_data=MsgData, app_config=AppConfig}=State) ->
   FailureDetector = eh_system_config:get_failure_detector(AppConfig),
   NewState9 = case FailureDetector:detect(Msg) of
                 {?EH_NODEDOWN, DownNode} ->
                   event_data("failure", node_down, eh_system_util:get_node_name(DownNode)),
-%                  NodeId = eh_system_config:get_node_id(AppConfig),
-%                  NewReplRing = eh_repl_ring:drop(DownNode, ReplRing),
-%                  NewSucc = eh_repl_ring:successor(NodeId, NewReplRing),
-%                  NewState1 = State#eh_system_state{repl_ring=NewReplRing, successor=NewSucc},
-%                  NewState3 = case Succ =:= DownNode of
-%                                true  ->
-%                                  NewState2 = eh_node_timestamp:update_state_merge_completed_set(DownNode, NewState1),
-%                                  send_down_msg(NewState2);
-%                                false ->
-%                                  NewState1
-%                              end,
-%                  event_state("failure.99", NewState3),
-%                  NewState3;
-                  State; 
+                  NodeId = eh_system_config:get_node_id(AppConfig),
+                  NodeOrder = eh_system_config:get_node_order(AppConfig),
+                  {NewReplRing, _} = eh_repl_ring:drop(DownNode, ReplRing, ReplRingOrder, NodeOrder),
+                  NewPred = eh_repl_ring:predecessor(NodeId, NewReplRing, ReplRingOrder, NodeOrder),
+                  NewSucc = eh_repl_ring:successor(NodeId, NewReplRing, ReplRingOrder, NodeOrder),
+                  NewState1 = State#eh_system_state{repl_ring=NewReplRing, predecessor=NewPred, successor=NewSucc},
+                  NewState3 = case {NewSucc, eh_node_state:snapshot_state(NewState1), Succ =:= DownNode, Pred =:= DownNode} of
+                                {undefined, ?EH_READY, _, _} ->
+                                  process_down_msg(NewState1);
+                                {_, ?EH_NOT_READY, true, _} ->
+                                  process_snapshot_request(NewReplRing, ReplRingOrder, NewSucc, NewState1);
+                                {_, ?EH_READY, true, false} ->
+                                  send_down_msg(fun eh_node_timestamp:no_persist_data/2,
+                                                fun send_pre_update_msg/4,
+                                                fun eh_node_timestamp:persist_data/2,
+                                                fun send_update_msg/4,
+                                                PreMsgData,
+                                                NewState1);
+                                {_, ?EH_READY, false, true} ->
+                                  send_down_msg(fun eh_node_timestamp:no_persist_data/2,
+                                                fun send_update_msg/4,
+						fun eh_node_timestamp:no_persist_data/2,
+					        fun reply_to_client/4,
+                                                MsgData,
+                                                NewState1);
+                                {_, _, _, _} ->
+                                  NewState1  
+                              end,
+                  event_state("failure.99", NewState3),
+                  NewState3;
                 _                        ->
                   State 
               end,
@@ -327,45 +340,51 @@ process_msg(Tag,
   event_state(DisplayTag++".99", NewState8),
   NewState8.
 
-%send_down_msg(#eh_system_state{pre_msg_data=PreMsgData, msg_data=MsgData, successor=undefined}=State) ->
-%  eh_system_util:fold_map(fun(K, V, S) -> process_down_msg(fun persist_data/3, K, V, S) end, State, PreMsgData),
-%  eh_system_util:fold_map(fun(K, V, S) -> process_down_msg(fun no_persist_data/3, K, V, S) end, State, MsgData),  
-%  State#eh_system_state{pre_msg_data=eh_system_util:new_map(), msg_data=eh_system_util:new_map(), ring_completed_map=eh_system_util:new_map()};
-%send_down_msg(#eh_system_state{pre_msg_data=PreMsgData, msg_data=MsgData}=State) ->
-%  State1 = send_down_msg(fun no_persist_data/3, fun send_pre_update_msg/4, fun persist_data/3, fun send_update_msg/4, PreMsgData, State),
-%  send_down_msg(fun no_persist_data/3, fun send_update_msg/4, fun no_persist_data/3, fun reply_to_client/4, MsgData, State1).
+process_snapshot_request(NodeList, NodeOrderList, Succ, #eh_system_state{app_config=AppConfig}=State) ->
+  NodeId = eh_system_config:get_node_id(AppConfig),
+  UniqueIdGenerator = eh_system_config:get_unique_id_generator(AppConfig),
+  ReplDataManager = eh_system_config:get_repl_data_manager(AppConfig),
+  SnapshotRef = UniqueIdGenerator:unique_id(),
+  {Timestamp, Snapshot} = ReplDataManager:timestamp(),
+  gen_server:cast({?EH_SYSTEM_SERVER, Succ}, {?EH_SNAPSHOT, {NodeId, NodeList, NodeOrderList, SnapshotRef, {Timestamp, Snapshot}}}),
+  State#eh_system_state{snapshot_ref=SnapshotRef}.
 
-%down_fold_fun(PersistRingFun,
-%              RingFun,
-%              PersistReturnedFun,
-%              ReturnedFun,
-%              NodeId,
-%              ReplRing,
-%              UMsgKey, 
-%              #eh_update_msg_data{node_id=MsgNodeId}=UMsgData,
-%              State) ->
-%  OriginNodeId = eh_repl_ring:originating_node_id(MsgNodeId, ReplRing),
-%  case NodeId =:= OriginNodeId of
-%    true  ->
-%      ReturnedFun(PersistReturnedFun, UMsgKey, UMsgData, State);
-%    false ->
-%      RingFun(PersistRingFun, UMsgKey, UMsgData, State)
-%  end.
+process_down_msg(PersistFun,
+                 MsgMap,
+                 State) ->
+  MsgList = eh_update_msg:get_map_msg_list(MsgMap),
+  lists:foldl(fun({_, UMsgList}, StateX) -> reply_to_client(PersistFun, UMsgList, undefined, StateX) end, State, MsgList).
 
-%send_down_msg(PersistRingFun,
-%              RingFun,
-%              PersistReturnedFun,
-%              ReturnedFun,
-%              MsgData,
-%              #eh_system_state{repl_ring=ReplRing, app_config=AppConfig}=State) ->
-%  NodeId = eh_system_config:get_node_id(AppConfig),
-%  eh_system_util:fold_map(fun(K, V, S) -> down_fold_fun(PersistRingFun, RingFun, PersistReturnedFun, ReturnedFun, NodeId, ReplRing, K, V, S) end, State, MsgData).
+process_down_msg(#eh_system_state{pre_msg_data=PreMsgData, msg_data=MsgData}=State) ->
+  State1 = process_down_msg(fun eh_node_timestamp:persist_data/2, PreMsgData, State),
+  State2 = process_down_msg(fun eh_node_timestamp:no_persist_data/2, MsgData, State1),
+  State2#eh_system_state{pre_msg_data=eh_system_util:new_map(), msg_data=eh_system_util:new_map(), completed_set=eh_system_util:new_set()}.
+  
+send_down_msg(PersistRingFun,
+              RingFun,
+              PersistReturnFun,
+              ReturnFun,
+              UMsgList,
+              CompletedSet,
+              State) ->
+  case eh_node_timestamp:msg_state(UMsgList, State) of
+    ?EH_RING_MSG ->
+      RingFun(PersistRingFun, UMsgList, CompletedSet, State);
+    _            ->
+      ReturnFun(PersistReturnFun, UMsgList, CompletedSet, State)
+  end.
 
-%process_down_msg(PersistFun,
-%                 UMsgKey,
-%                 UMsgData,
-%                 State) ->
-%  reply_to_client(PersistFun, UMsgKey, UMsgData, State).
+send_down_msg(PersistRingFun,
+              RingFun,
+              PersistReturnFun,
+              ReturnFun,
+              MsgMap,
+              State) ->
+  CompletedSet = eh_system_util:new_set(),
+  MsgList = eh_update_msg:get_map_msg_list(MsgMap),
+  lists:foldl(fun({_, UMsgList}, StateX) -> send_down_msg(PersistRingFun, RingFun, PersistReturnFun, ReturnFun, UMsgList, CompletedSet, StateX) end, State, MsgList).
+
+
 
 
 

@@ -24,6 +24,7 @@
          update_state_transient/1,
          data_state/1,
          client_state/1,
+         snapshot_state/1,
          msg_state/1,
          display_state/1]).
 
@@ -62,6 +63,13 @@ data_state(#eh_system_state{node_status=?EH_TRANSIENT_DU, pending_pre_msg_data=P
       ?EH_NOT_READY
   end;
 data_state(_) ->
+  ?EH_NOT_READY.
+
+snapshot_state(#eh_system_state{node_status=?EH_READY}) ->
+  ?EH_READY;
+snapshot_state(#eh_system_state{node_status=?EH_TRANSIENT_DU}) ->
+  ?EH_READY;
+snapshot_state(_) ->
   ?EH_NOT_READY.
 
 client_state(#eh_system_state{node_status=?EH_READY}) ->

@@ -29,6 +29,7 @@
          valid_update_msg/2,
          valid_pending_pre_msg_data/2,
          valid_add_node_msg/2,
+         msg_state/2,
          persist_data/2,
          no_persist_data/2]).
 
@@ -103,8 +104,8 @@ valid_pending_pre_msg_data(PendingPreMsgData, #eh_system_state{pre_msg_data=PreM
   Flag = maps:fold(fun(UMsgKey, _, FlagX) -> FlagX andalso (not eh_system_util:is_key_map(UMsgKey, PreMsgData)) end, true, PendingPreMsgData),
   maps:fold(fun(UMsgKey, _, FlagX) -> FlagX andalso (not eh_system_util:is_key_map(UMsgKey, MsgData)) end, Flag, PendingPreMsgData). 
 
-returned_msg(UMsgList, 
-             #eh_system_state{repl_ring_order=ReplRingOrder, repl_ring=ReplRing, app_config=AppConfig}) ->
+msg_state(UMsgList, 
+          #eh_system_state{repl_ring_order=ReplRingOrder, repl_ring=ReplRing, app_config=AppConfig}) ->
   NodeId = eh_system_config:get_node_id(AppConfig),
   NodeOrder = eh_system_config:get_node_order(AppConfig),
   {_, _, MsgNodeId, _} = eh_update_msg:get_msg_param(UMsgList),
@@ -150,7 +151,7 @@ valid_msg(CheckFun,
       {Flag4, State2} = ConflictResolveFun(UMsgList, State1),
       case Flag4 of
         true  ->
-          {true, returned_msg(UMsgList, State2), State2};
+          {true, msg_state(UMsgList, State2), State2};
         false ->
           {false, undefined, State2}
       end;
@@ -191,31 +192,32 @@ check_set(UMsgList, CompletedSet) ->
   lists:any(fun({UMsgKey, _}) -> eh_system_util:is_key_set(UMsgKey, CompletedSet) end, UMsgList).
 
 resolve_conflict(MsgListTag, MsgMapTag, UMsgList, MsgMap, #eh_system_state{app_config=AppConfig}) ->
-  Flag = lists:any(fun({UMsgKey, _}) -> eh_system_util:is_key_map(UMsgKey, MsgMap) end, UMsgList),
-  case Flag of
-    true  ->
-      EUMsgList = eh_update_msg:get_map_msg_list(MsgMap),
-      {ETimestamp, EClientId, EMsgNodeId, ERef} = eh_update_msg:get_msg_param(EUMsgList),
-      {_, _, MsgNodeId, _} = eh_update_msg:get_msg_param(UMsgList),
+  {MsgTimestamp, _, MsgNodeId, _} = eh_update_msg:get_msg_param(UMsgList),
+  #eh_update_msg_data{node_id=EMsgNodeId, client_id=EClientId, msg_ref=EMsgRef} = eh_update_msg:exist_msg_list(UMsgList, MsgMap),
+  case {EMsgNodeId, EMsgNodeId =:= MsgNodeId} of
+    {undefined, _} ->
+      {true, MsgMap};
+    {_, true}      ->
+      {true, MsgMap};
+    {_, _}         ->
       ConflictResolver = eh_system_config:get_write_conflict_resolver(AppConfig),
       ResolvedNodeId = ConflictResolver:resolve({MsgListTag, MsgNodeId}, {MsgMapTag, EMsgNodeId}),
       case ResolvedNodeId =:= MsgNodeId of
         true  ->
-          {TMsgMap, FMsgMap} = eh_update_msg:partition_on_timestamp_node_id(ETimestamp, EMsgNodeId, MsgMap),
+          {TMsgMap, FMsgMap} = eh_update_msg:partition_on_timestamp_node_id(MsgTimestamp, EMsgNodeId, MsgMap),
           NodeId = eh_system_config:get_node_id(AppConfig),
           case EMsgNodeId =:= NodeId of
             true  ->
-              {_, _, _, _, DataList} = eh_update_msg:get_data_list(eh_update_msg:get_map_msg_list(TMsgMap)),
-              eh_query_handler:reply(EClientId, ERef, eh_query_handler:error_being_updated(DataList));
+              [{_, EUMsgList}] = eh_update_msg:get_map_msg_list(TMsgMap),
+              {_, _, _, _, DataList} = eh_update_msg:get_data_list(EUMsgList),
+              eh_query_handler:reply(EClientId, EMsgRef, eh_query_handler:error_being_updated(DataList));
             false ->
               ok
           end,
           {true, FMsgMap};
         false ->
           {false, MsgMap}
-      end;
-    false ->
-      {true, MsgMap}
+      end
   end.
 
 pre_update_conflict_resolver(UMsgList, #eh_system_state{pre_msg_data=PreMsgData, msg_data=MsgData}=State) ->
@@ -229,8 +231,9 @@ pre_update_conflict_resolver(UMsgList, #eh_system_state{pre_msg_data=PreMsgData,
           end,
   {Flag3, State#eh_system_state{pre_msg_data=PreMsgData1}}.
 
-update_conflict_resolver(_UMsgList, State) ->
-  {true, State}.
+update_conflict_resolver(UMsgList, #eh_system_state{pre_msg_data=PreMsgData}=State) ->
+  {Flag1, PreMsgData1} = resolve_conflict(?EH_SUCC_UPDATE, ?EH_PRED_PRE_UPDATE, UMsgList, PreMsgData, State),
+  {Flag1, State#eh_system_state{pre_msg_data=PreMsgData1}}.
 
 persist_data(UMsgList,
              #eh_system_state{app_config=AppConfig}=State) ->
