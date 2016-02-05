@@ -44,8 +44,6 @@
          to_list_map/1,
          partition_map/2,
          filter_map/2,
-         valid_result/1, 
-         extract_nodes/2,
          display_atom_to_list/1]).
 
 -spec get_node_name(Node :: atom()) -> string().
@@ -142,18 +140,6 @@ partition_map(Fun, Map) ->
 
 filter_map(Fun, Map) ->
   maps:filter(Fun, Map).
-
-valid_result([]) ->
-  true;
-valid_result([_H | []]) ->
-  true;
-valid_result([{_, R0} | Rest]) ->
-  lists:all(fun({_, RX}) -> R0 =:= RX end, Rest).
-
-extract_nodes([{Node, _} | Rest], Acc) ->
-  extract_nodes(Rest, [Node | Acc]);
-extract_nodes([], Acc) ->
-  Acc.
 
 display_atom_to_list(Atom) ->
   ListAtom = atom_to_list(Atom),

@@ -36,7 +36,13 @@ init([AppConfig]) ->
   State = #eh_system_state{app_config=AppConfig},
   {ok, State}.
 
-
+handle_call({?EH_GET_DATA, {ObjectType, ObjectId}},
+            _From,
+            #eh_system_state{app_config=AppConfig}=State) ->
+  ReplDataManager = eh_system_config:get_repl_data_manager(AppConfig),
+  Reply = ReplDataManager:get_data({ObjectType, ObjectId}),
+  {reply, Reply, State};
+  
 handle_call(?EH_DATA_VIEW, 
             _From, 
             #eh_system_state{app_config=AppConfig}=State) ->

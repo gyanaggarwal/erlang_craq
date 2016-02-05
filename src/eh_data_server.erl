@@ -88,8 +88,15 @@ handle_call(?EH_DATA_VIEW,
   Reply = eh_data_util:data_view(Data),
   {reply, Reply, State};
 
+handle_call({?EH_GET_DATA, {ObjectType, ObjectId}},
+            _From,
+            #eh_data_state{data=Data}=State) ->
+  Reply = eh_data_util:get_data(ObjectType, ObjectId, Data),
+  {reply, Reply, State};
+        
 handle_call({?EH_CHECK_DATA, {Timestamp, DataList}},
-            _From, #eh_data_state{data=Data}=State) ->
+            _From, 
+            #eh_data_state{data=Data}=State) ->
   Reply = eh_data_util:check_data(Timestamp, DataList, Data),
   {reply, Reply, State}.
 

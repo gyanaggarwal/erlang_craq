@@ -26,6 +26,7 @@
          snapshot/2,
          update_snapshot/1,
          data_view/0,
+         get_data/1,
          check_data/1]).
 
 -include("erlang_craq.hrl").
@@ -53,6 +54,10 @@ update_snapshot(Q0) ->
 -spec data_view() -> term().
 data_view() ->
   gen_server:call(?EH_DATA_SERVER, ?EH_DATA_VIEW).
+
+-spec get_data(Msg :: term()) -> term().
+get_data(Msg) ->
+  gen_server:call(?EH_DATA_SERVER, {?EH_GET_DATA, Msg}).
 
 -spec check_data(Msg :: term()) -> true | false.
 check_data(Msg) ->

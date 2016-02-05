@@ -51,6 +51,7 @@
 -define(EH_UPDATE_SNAPSHOT,        eh_update_snapshot).
 -define(EH_DATA_VIEW,              eh_data_view).
 -define(EH_CHECK_DATA,             eh_check_data).
+-define(EH_GET_DATA,               eh_get_data).
 
 -define(EH_NOT_READY,              eh_not_ready).
 -define(EH_READY,                  eh_ready).

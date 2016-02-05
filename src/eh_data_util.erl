@@ -26,12 +26,16 @@
          add_key_value/2,
          update_timestamp/2,
          data_view/1,
+         get_data/3,
          check_data/3]).
 
 -include("erlang_craq.hrl").
 
 queue_fun(Q0, _Acc0) ->
   queue:out(Q0).
+
+queue_r_fun(Q0, _Acc0) ->
+  queue:out_r(Q0).
 
 check_data_queue_fun(Q0, true) ->
   {empty, Q0};
@@ -86,6 +90,20 @@ query_data(ObjectType, ObjectId, Mi0) ->
     {ok, Qi0} ->
       process_data(fun query_fun/3, fun queue_fun/2, {ObjectType, ObjectId}, Qi0, [])
   end.
+
+get_data_fun({ObjectType, ObjectId}, 
+             #eh_storage_value{timestamp=Timestamp, data_index=DataIndex, status=Status, column=Column, value=Value}, 
+             Lo0) ->
+  [{ObjectType, ObjectId, Timestamp, DataIndex, Status, Column, Value} | Lo0].
+  
+get_data(ObjectType, ObjectId, Mi0) ->
+  case maps:find(make_key(ObjectType, ObjectId), Mi0) of
+    error     ->
+      [];
+    {ok, Qi0} ->
+      process_data(fun get_data_fun/3, fun queue_r_fun/2, {ObjectType, ObjectId}, Qi0, [])
+  end.
+
 
 check_data_fun(Timestamp, #eh_storage_value{timestamp=VTimestamp}, _Acc0) ->
   VTimestamp >= Timestamp.
