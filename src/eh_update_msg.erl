@@ -28,6 +28,7 @@
          exist_msg_key/2,
          exist_msg_list/2,
          filter_node_id/2,
+         filter_effective_head_node_id/2,
          partition_on_timestamp_node_id/3,
          add_list_to_map/2]).
 
@@ -82,18 +83,18 @@ get_object_list([], Acc) ->
   Acc.
 
 exist_map_msg(ObjectType, ObjectId, Map) ->
-  maps:fold(fun(#eh_update_msg_key{object_type=XOT, object_id=XOI}, #eh_update_msg_data{node_id=NodeId}, Acc) -> 
-              case Acc of
-                undefined ->
-                  case ObjectType =:= XOT andalso ObjectId =:= XOI of
-                    true  ->
-                      NodeId;
-                    false ->
-                      undefined
-                  end;
-                Other     ->
-                  Other
-              end end, undefined, Map).
+  eh_system_util:fold_map(fun(#eh_update_msg_key{object_type=XOT, object_id=XOI}, #eh_update_msg_data{node_id=NodeId}, Acc) -> 
+                            case Acc of
+                              undefined ->
+                                case ObjectType =:= XOT andalso ObjectId =:= XOI of
+                                  true  ->
+                                    NodeId;
+                                  false ->
+                                    undefined
+                                end;
+                              Other     ->
+                                Other
+                            end end, undefined, Map).
  
 exist_msg_key(UMsgKey, Map) ->
   case eh_system_util:find_map(UMsgKey, Map) of
@@ -111,6 +112,12 @@ exist_msg_list(UMsgList, Map) ->
                                                  UMsgData
                                              end end, #eh_update_msg_data{}, UMsgList).
 
+filter_effective_head_node_id(Map, #eh_system_state{repl_ring=ReplRing, repl_ring_order=ReplRingOrder, app_config=AppConfig}) ->
+  NodeId = eh_system_config:get_node_id(AppConfig),
+  NodeOrder = eh_system_config:get_node_order(AppConfig),
+  eh_system_util:filter_map(fun(_K, #eh_update_msg_data{node_id=MsgNodeId}) ->
+                              NodeId =:= eh_repl_ring:effective_head_node_id(MsgNodeId, ReplRing, ReplRingOrder, NodeOrder) end, Map).
+                              
 filter_node_id(NodeId, Map) ->
   eh_system_util:filter_map(fun(_K, #eh_update_msg_data{node_id=MsgNodeId}) -> NodeId =:= MsgNodeId end, Map).
 

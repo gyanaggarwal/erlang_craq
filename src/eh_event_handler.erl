@@ -69,9 +69,10 @@ handle_event({state, {Module, Msg, StateData=#eh_system_state{}}}, File) ->
   ReplRing = eh_system_util:make_list_to_string(fun eh_system_util:get_node_name/1, StateData#eh_system_state.repl_ring),
   PreMsgData = list_msg_map(StateData#eh_system_state.pre_msg_data),
   MsgData = list_msg_map(StateData#eh_system_state.msg_data),
+  PendingPreMsgData = list_msg_map(StateData#eh_system_state.pending_pre_msg_data),
   CSet = list_msg_set_value(StateData#eh_system_state.completed_set),
-  io:fwrite(File, "[~p] ~p node_status=~p, node_id=~p, repl_ring=~p, pred=~p, succ=~p, timestamp=~p, pre_msg_data=~p, msg_data=~p, completed_set=~p~n~n",
-            [Module, Msg, NodeState, NodeId, ReplRing, Pred, Succ, Timestamp, PreMsgData, MsgData, CSet]),
+  io:fwrite(File, "[~p] ~p node_status=~p, node_id=~p, repl_ring=~p, pred=~p, succ=~p, timestamp=~p, pre_msg_data=~p, msg_data=~p, completed_set=~p, pending_pre_msg_data=~p~n~n",
+            [Module, Msg, NodeState, NodeId, ReplRing, Pred, Succ, Timestamp, PreMsgData, MsgData, CSet, PendingPreMsgData]),
   {ok, File};
 
 handle_event({message, {Module, Msg, {UMsgList, CompletedSet}}}, File) ->

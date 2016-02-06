@@ -68,10 +68,10 @@ handle_call({?EH_UPDATE, {?EH_NOT_READY, _Timestamp, _}},
 
 handle_call({?EH_UPDATE, {?EH_READY, Timestamp, UpdateList}}, 
             _From, 
-            #eh_data_state{file=File, data=Data, timestamp=StateTimestamp, data_index_list=StateDataIndexList, app_config=AppConfig}=State) ->
-  {_, {_, DIL0}, Q0, D0} = eh_data_util:make_data(UpdateList, Timestamp, {StateTimestamp, StateDataIndexList}, queue:new(), Data),
+            #eh_data_state{file=File, data=Data, transient_data=TQ0, timestamp=StateTimestamp, data_index_list=StateDataIndexList, app_config=AppConfig}=State) ->
+  {_, {_, DIL0}, Q0, D0} = eh_data_util:make_data(UpdateList, Timestamp, {StateTimestamp, StateDataIndexList}, TQ0, Data),
   ok = eh_storage_data_operation_api:write(AppConfig, File, Q0),
-  State1 = State#eh_data_state{timestamp=Timestamp, data_index_list=DIL0, data=D0},
+  State1 = State#eh_data_state{timestamp=Timestamp, data_index_list=DIL0, data=D0, transient_data=queue:new()},
   {reply, ok, State1};
 
 handle_call({?EH_UPDATE_SNAPSHOT, Qi0}, 

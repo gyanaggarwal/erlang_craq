@@ -101,8 +101,8 @@ valid_add_node_msg(Node,
   end.
 
 valid_pending_pre_msg_data(PendingPreMsgData, #eh_system_state{pre_msg_data=PreMsgData, msg_data=MsgData}) ->
-  Flag = maps:fold(fun(UMsgKey, _, FlagX) -> FlagX andalso (not eh_system_util:is_key_map(UMsgKey, PreMsgData)) end, true, PendingPreMsgData),
-  maps:fold(fun(UMsgKey, _, FlagX) -> FlagX andalso (not eh_system_util:is_key_map(UMsgKey, MsgData)) end, Flag, PendingPreMsgData). 
+  Flag = eh_system_util:fold_map(fun(UMsgKey, _, FlagX) -> FlagX andalso (not eh_system_util:is_key_map(UMsgKey, PreMsgData)) end, true, PendingPreMsgData),
+  eh_system_util:fold_map(fun(UMsgKey, _, FlagX) -> FlagX andalso (not eh_system_util:is_key_map(UMsgKey, MsgData)) end, Flag, PendingPreMsgData). 
 
 msg_state(UMsgList, 
           #eh_system_state{repl_ring_order=ReplRingOrder, repl_ring=ReplRing, app_config=AppConfig}) ->
@@ -239,7 +239,7 @@ persist_data(UMsgList,
              #eh_system_state{app_config=AppConfig}=State) ->
   {Timestamp, _, _, _, DataList} = eh_update_msg:get_data_list(UMsgList),
   ReplDataManager = eh_system_config:get_repl_data_manager(AppConfig),
-  ReplDataManager:update(eh_node_state:data_state(State), Timestamp, DataList),
+  ReplDataManager:update(eh_node_state:snapshot_state(State), Timestamp, DataList),
   eh_query_handler:process_pending(DataList, State).
 
 no_persist_data(_, State) ->

@@ -80,7 +80,7 @@ handle_cast({?EH_ADD_NODE, {Node, NodeList, NodeOrderList}},
                   FailureDetector:set(Node, NodeList1),
                   NewState2 = eh_node_state:update_state_transient(NewState1),
                   NewState2#eh_system_state{repl_ring_order=NodeOrderList1, repl_ring=NodeList1, predecessor=Pred1, successor=Succ1};
-                ?EH_VALID_FOR_EXISTING -> 
+                ?EH_VALID_FOR_EXISTING ->
                   FailureDetector:set(Node),
                   State#eh_system_state{repl_ring_order=NodeOrderList1, repl_ring=NodeList1, predecessor=Pred1, successor=Succ1};
                 _                      ->
@@ -96,7 +96,7 @@ handle_cast({?EH_SNAPSHOT, {Node, NodeList, NodeOrderList,  Ref, {Timestamp, Sna
   {NodeList1, NodeOrderList1, Pred1, Succ1} = eh_repl_ring:get_ordered_list_pred_succ(NodeId, NodeList, NodeOrderList, NodeOrder),
   ReplDataManager = eh_system_config:get_repl_data_manager(AppConfig),
   Q0 = ReplDataManager:snapshot(Timestamp, Snapshot),
-  PendingPreMsgMap = eh_update_msg:filter_node_id(NodeId, PreMsgData),
+  PendingPreMsgMap = eh_update_msg:filter_effective_head_node_id(PreMsgData, State),
   gen_server:cast({?EH_SYSTEM_SERVER, Node}, {?EH_UPDATE_SNAPSHOT, {Ref, Q0, PendingPreMsgMap}}),
   NewState2 = State#eh_system_state{repl_ring_order=NodeOrderList1, repl_ring=NodeList1, predecessor=Pred1, successor=Succ1},
   event_state("snapshot.99", NewState2),
