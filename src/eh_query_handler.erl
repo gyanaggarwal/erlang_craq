@@ -25,7 +25,6 @@
          updated/1,
          query/6,
          process_pending/2,
-         process_aq/5,
          process_tail/6]).
 
 -include("erlang_craq.hrl").
@@ -82,18 +81,10 @@ query(Tag, ObjectType, ObjectId, From, Ref, #eh_system_state{app_config=AppConfi
   reply(From, Ref, {Tag, query_reply(ObjectType, ObjectId, AppConfig)}),
   State.
 
-process_aq(ObjectType, ObjectId, From, Ref, #eh_system_state{app_config=AppConfig}=State) ->
-  QueryHandler = eh_system_config:get_query_aq_handler(AppConfig),
-  QueryHandler:process(ObjectType, ObjectId, undefined, From, Ref, State).
-
 process_tail(ObjectType, ObjectId, Tail, From, Ref, State) ->
-  case Tail of
-    undefined ->
-      eh_query_handler:process_aq(ObjectType, ObjectId, From, Ref, State);
-    Other     ->
-      gen_server:cast({?EH_SYSTEM_SERVER, Other}, {?EH_QUERY_AQ, {ObjectType, ObjectId, From, Ref}}),
-      State
-  end.
+  gen_server:cast({?EH_SYSTEM_SERVER, Tail}, {?EH_QUERY_AQ, {ObjectType, ObjectId, From, Ref}}),
+  State.
+
 
 
 

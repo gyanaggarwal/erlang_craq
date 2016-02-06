@@ -1,0 +1,52 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Copyright (c) 2016 Gyanendra Aggarwal.  All Rights Reserved.
+%%
+%% This file is provided to you under the Apache License,
+%% Version 2.0 (the "License"); you may not use this file
+%% except in compliance with the License.  You may obtain
+%% a copy of the License at
+%%
+%%   http://www.apache.org/licenses/LICENSE-2.0
+%%
+%% Unless required by applicable law or agreed to in writing,
+%% software distributed under the License is distributed on an
+%% "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+%% KIND, either express or implied.  See the License for the
+%% specific language governing permissions and limitations
+%% under the License.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+{eh_query_handler,                  [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_failure_detector,               [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_repl_data_manager,              [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_storage_data,                   [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_unique_id_generator,            [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_write_conflict_resolver,        [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_app,                            [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_aq_query_handler_api,           [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_config,                         [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_data_server,                    [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_data_util,                      [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_dirty_read_query_handler_api,   [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_event,                          [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_event_handler,                  [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_failure_detector_api,           [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_no_wait_query_handler_api,      [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_node_state,                     [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_node_timestamp,                 [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_persist_storage_data,           [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_repl_data_manager_api,          [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_repl_ring,                      [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_storage_data_api,               [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_storage_data_operation_api,     [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_sup,                            [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_system_config,                  [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_system_server,                  [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_system_sup,                     [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_system_util,                    [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_unique_id_generator_api,        [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_update_msg,                     [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_wait_query_handler_api,         [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_write_conflict_resolver_api,    [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{erlang_craq,                       [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{erlang_craq_validate,              [{i, "../include/"}, {outdir, "../ebin/"}]}.

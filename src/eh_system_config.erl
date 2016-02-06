@@ -27,7 +27,6 @@
          get_write_conflict_resolver/1,
          get_unique_id_generator/1,
          get_query_handler/1,
-         get_query_aq_handler/1,
          get_file_repl_data/1,
          get_file_repl_log/1,
          get_debug_mode/1,
@@ -44,7 +43,6 @@
 -define(WRITE_CONFLICT_RESOLVER,   eh_write_conflict_resolver_api).
 -define(UNIQUE_ID_GENERATOR,       eh_unique_id_generator_api).
 -define(QUERY_HANDLER,             eh_no_wait_query_handler_api).
--define(QUERY_AQ_HANDLER,          eh_no_wait_query_handler_api).
 -define(DATA_DIR,                  "").
 -define(FILE_REPL_DATA,            "_repl.data").
 -define(FILE_REPL_LOG,             standard_io).
@@ -69,7 +67,6 @@ get_env() ->
                  write_conflict_resolver  = eh_config:get_env(erlang_craq, write_conflict_resolver,  ?WRITE_CONFLICT_RESOLVER),
                  unique_id_generator      = eh_config:get_env(erlang_craq, unique_id_generator,      ?UNIQUE_ID_GENERATOR),
                  query_handler            = eh_config:get_env(erlang_craq, query_handler,            ?QUERY_HANDLER),
-                 query_aq_handler         = eh_config:get_env(erlang_craq, query_aq_handler,         ?QUERY_AQ_HANDLER),
                  file_repl_data           = eh_system_util:get_file_name(NodeName, DataDir, FileReplData),
                  file_repl_log            = eh_system_util:get_file_name(NodeName, DataDir, FileReplLog),
                  debug_mode               = eh_config:get_env(erlang_craq, debug_mode,               ?DEBUG_MODE),
@@ -108,10 +105,6 @@ get_unique_id_generator(#eh_app_config{unique_id_generator=UniqueIdGenerator}) -
 -spec get_query_handler(AppConfig :: #eh_app_config{}) -> atom().
 get_query_handler(#eh_app_config{query_handler=QueryHandler}) ->
   QueryHandler.
-
--spec get_query_aq_handler(AppConfig :: #eh_app_config{}) -> atom().
-get_query_aq_handler(#eh_app_config{query_aq_handler=QueryAqHandler}) ->
-  QueryAqHandler.
 
 -spec get_file_repl_data(AppConfig :: #eh_app_config{}) -> string().
 get_file_repl_data(#eh_app_config{file_repl_data=FileReplData}) ->

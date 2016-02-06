@@ -36,6 +36,7 @@ init([AppConfig]) ->
   State = #eh_system_state{app_config=AppConfig},
   {ok, State}.
 
+
 handle_call({?EH_GET_DATA, {ObjectType, ObjectId}},
             _From,
             #eh_system_state{app_config=AppConfig}=State) ->
@@ -151,7 +152,7 @@ handle_cast({?EH_QUERY_AQ, {ObjectType, ObjectId, From, Ref}},
                    eh_query_handler:process_tail(ObjectType, ObjectId, Other, From, Ref, State)
                end;
              _             ->
-               eh_query_handler:process_aq(ObjectType, ObjectId, From, Ref, State)
+               eh_query_handler:query(ok, ObjectType, ObjectId, From, Ref, State)
            end,
   {noreply, State1};
 

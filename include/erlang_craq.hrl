@@ -70,7 +70,6 @@
                                  write_conflict_resolver             :: atom(),
                                  unique_id_generator                 :: atom(),
                                  query_handler                       :: atom(),
-                                 query_aq_handler                    :: atom(),
                                  file_repl_data                      :: string(),
                                  file_repl_log                       :: standard_io | string(),
                                  debug_mode=false                    :: true | false,
