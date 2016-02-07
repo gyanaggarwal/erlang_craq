@@ -34,6 +34,7 @@
 {eh_no_wait_query_handler_api,      [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {eh_node_state,                     [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {eh_node_timestamp,                 [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_persist_data,                   [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {eh_persist_storage_data,           [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {eh_repl_data_manager_api,          [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {eh_repl_ring,                      [{i, "../include/"}, {outdir, "../ebin/"}]}.

@@ -29,9 +29,7 @@
          valid_update_msg/2,
          valid_pending_pre_msg_data/2,
          valid_add_node_msg/2,
-         msg_state/2,
-         persist_data/2,
-         no_persist_data/2]).
+         msg_status/2]).
 
 -include("erlang_craq.hrl").
 
@@ -104,7 +102,7 @@ valid_pending_pre_msg_data(PendingPreMsgData, #eh_system_state{pre_msg_data=PreM
   Flag = eh_system_util:fold_map(fun(UMsgKey, _, FlagX) -> FlagX andalso (not eh_system_util:is_key_map(UMsgKey, PreMsgData)) end, true, PendingPreMsgData),
   eh_system_util:fold_map(fun(UMsgKey, _, FlagX) -> FlagX andalso (not eh_system_util:is_key_map(UMsgKey, MsgData)) end, Flag, PendingPreMsgData). 
 
-msg_state(UMsgList, 
+msg_status(UMsgList, 
           #eh_system_state{repl_ring_order=ReplRingOrder, repl_ring=ReplRing, app_config=AppConfig}) ->
   NodeId = eh_system_config:get_node_id(AppConfig),
   NodeOrder = eh_system_config:get_node_order(AppConfig),
@@ -127,7 +125,7 @@ process_pending_pre_msg_data(UMsgList, #eh_system_state{pending_pre_msg_data=Pen
       {_, MsgMap} = eh_update_msg:partition_on_timestamp_node_id(MsgTimestamp, MsgNodeId, PendingPreMsgData),
       State1 = case eh_system_util:size_map(MsgMap) > 0 of
                  true  ->
-                   persist_data(eh_system_util:to_list_map(MsgMap), State);
+                   eh_persist_data:persist_data(eh_system_util:to_list_map(MsgMap), State);
                  false ->
                    State
                end,
@@ -151,7 +149,7 @@ valid_msg(CheckFun,
       {Flag4, State2} = ConflictResolveFun(UMsgList, State1),
       case Flag4 of
         true  ->
-          {true, msg_state(UMsgList, State2), State2};
+          {true, msg_status(UMsgList, State2), State2};
         false ->
           {false, undefined, State2}
       end;
@@ -235,15 +233,6 @@ update_conflict_resolver(UMsgList, #eh_system_state{pre_msg_data=PreMsgData}=Sta
   {Flag1, PreMsgData1} = resolve_conflict(?EH_SUCC_UPDATE, ?EH_PRED_PRE_UPDATE, UMsgList, PreMsgData, State),
   {Flag1, State#eh_system_state{pre_msg_data=PreMsgData1}}.
 
-persist_data(UMsgList,
-             #eh_system_state{app_config=AppConfig}=State) ->
-  {Timestamp, _, _, _, DataList} = eh_update_msg:get_data_list(UMsgList),
-  ReplDataManager = eh_system_config:get_repl_data_manager(AppConfig),
-  ReplDataManager:update(eh_node_state:snapshot_state(State), Timestamp, DataList),
-  eh_query_handler:process_pending(DataList, State).
-
-no_persist_data(_, State) ->
-  State.
 
 
 

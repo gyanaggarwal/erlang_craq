@@ -52,7 +52,13 @@ compare({_N1, []}, {_N2, []}, Acc) ->
 
 check_data(NodeList) ->
   [R1 | Result] = data_view(NodeList),
-  lists:foldl(fun(R2, Acc) -> compare(R1, R2, Acc) end, [], Result).
+  Issues = lists:foldl(fun(R2, Acc) -> compare(R1, R2, Acc) end, [], Result),
+  case length(Issues) of
+    0 ->
+      valid;
+    _ ->
+     Issues
+  end.
 
 data_view(NodeList) ->
   {Replies, _} = gen_server:multi_call(NodeList, ?EH_SYSTEM_SERVER, ?EH_DATA_VIEW),

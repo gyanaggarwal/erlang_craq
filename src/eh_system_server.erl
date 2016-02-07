@@ -174,9 +174,9 @@ handle_cast({?EH_UPDATE, {From, Ref, ObjectList}},
                   NewState1 = eh_node_timestamp:update_state_timestamp(Timestamp1, State),
                   case Succ of 
                     undefined ->
-                      reply_to_client(fun eh_node_timestamp:persist_data/2, UMsgList, CompletedSet, NewState1);
+                      reply_to_client(fun eh_persist_data:persist_data/2, UMsgList, CompletedSet, NewState1);
                     _         -> 
-                      send_pre_update_msg(fun eh_node_timestamp:no_persist_data/2, UMsgList, CompletedSet, NewState1)
+                      send_pre_update_msg(fun eh_persist_data:no_persist_data/2, UMsgList, CompletedSet, NewState1)
                   end                            
               end,
   event_state("update.99", NewState9),
@@ -186,9 +186,9 @@ handle_cast({?EH_PRED_PRE_UPDATE, {UMsgList, CompletedSet}}, State) ->
   NewState1 = process_msg(?EH_PRED_PRE_UPDATE,
                           fun eh_node_timestamp:valid_pre_update_msg/2,
                           fun send_update_msg/4,
-                          fun eh_node_timestamp:persist_data/2,
+                          fun eh_persist_data:persist_data/2,
                           fun send_pre_update_msg/4,
-                          fun eh_node_timestamp:no_persist_data/2,
+                          fun eh_persist_data:no_persist_data/2,
                           UMsgList,
                           CompletedSet,
                           State),
@@ -198,9 +198,9 @@ handle_cast({?EH_SUCC_UPDATE, {UMsgList, CompletedSet}}, State) ->
   NewState1 = process_msg(?EH_SUCC_UPDATE,
                           fun eh_node_timestamp:valid_update_msg/2,
                           fun reply_to_client/4,
-                          fun eh_node_timestamp:persist_data/2,
+                          fun eh_persist_data:persist_data/2,
                           fun send_update_msg/4,
-                          fun eh_node_timestamp:persist_data/2,
+                          fun eh_persist_data:persist_data/2,
                           UMsgList,
                           CompletedSet,
                           State),
@@ -233,17 +233,17 @@ handle_info(Msg,
                                   process_snapshot_request(NewReplRing, ReplRingOrder, NewSucc, NewState1);
                                 {_, ?EH_READY, true, false} ->
                                   send_down_msg(?EH_PRED_PRE_UPDATE,
-                                                fun eh_node_timestamp:no_persist_data/2,
+                                                fun eh_persist_data:no_persist_data/2,
                                                 fun send_pre_update_msg/4,
-                                                fun eh_node_timestamp:persist_data/2,
+                                                fun eh_persist_data:persist_data/2,
                                                 fun send_update_msg/4,
                                                 PreMsgData,
                                                 NewState1);
                                 {_, ?EH_READY, false, true} ->
                                   send_down_msg(?EH_SUCC_UPDATE,
-                                                fun eh_node_timestamp:no_persist_data/2,
+                                                fun eh_persist_data:no_persist_data/2,
                                                 fun send_update_msg/4,
-						fun eh_node_timestamp:no_persist_data/2,
+						fun eh_persist_data:no_persist_data/2,
 					        fun reply_to_client/4,
                                                 MsgData,
                                                 NewState1);
@@ -365,8 +365,8 @@ process_down_msg(PersistFun,
   lists:foldl(fun({_, UMsgList}, StateX) -> reply_to_client(PersistFun, UMsgList, undefined, StateX) end, State, MsgList).
 
 process_down_msg(#eh_system_state{pre_msg_data=PreMsgData, msg_data=MsgData}=State) ->
-  State1 = process_down_msg(fun eh_node_timestamp:persist_data/2, PreMsgData, State),
-  State2 = process_down_msg(fun eh_node_timestamp:no_persist_data/2, MsgData, State1),
+  State1 = process_down_msg(fun eh_persist_data:persist_data/2, PreMsgData, State),
+  State2 = process_down_msg(fun eh_persist_data:no_persist_data/2, MsgData, State1),
   State2#eh_system_state{pre_msg_data=eh_system_util:new_map(), msg_data=eh_system_util:new_map(), completed_set=eh_system_util:new_set()}.
   
 send_down_msg(Tag,
@@ -377,7 +377,7 @@ send_down_msg(Tag,
               UMsgList,
               CompletedSet,
               State) ->
-  case {Tag, eh_node_timestamp:msg_state(UMsgList, State)} of
+  case {Tag, eh_node_timestamp:msg_status(UMsgList, State)} of
     {?EH_PRED_PRE_UPDATE, ?EH_TAIL_MSG} ->
       ReturnFun(PersistReturnFun, UMsgList, CompletedSet, State);
     {?EH_SUCC_UPDATE, ?EH_HEAD_MSG}     ->
