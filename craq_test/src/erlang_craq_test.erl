@@ -23,6 +23,7 @@
          node_list/0,
          update0/1,
          update1/1,
+         delete2/1,
          multi_update20/2,
          multi_update21/2,
          multi_update30/3,
@@ -88,31 +89,53 @@ update0(N1) ->
   erlang_craq:update(N1, candidate, 10, [{name, donald_trump}, {party, republican}]).
 
 update1(N1) ->
-  erlang_craq:update(N1, [{candidate, 10, [{name, donald_trump}, {party, republican}]}, {candidate, 20, [{name, hillary_clinton}, {party, democrat}]}]).
+  erlang_craq:update(N1, [{candidate, 10, [{name, donald_trump}, {party, republican}, {gender, male}]}, 
+                          {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}]).
   
 multi_update20(N1, N2) ->
   erlang_craq:multi_update([N1, N2],
-                           [[{candidate, 10, [{name, donald_trump}, {party, republican}]}, {candidate, 20, [{name, hillary_clinton}, {party, democrat}]}],
-                            [{candidate, 30, [{name, ted_cruz}, {party, republican}]}, {candidate, 40, [{name, bernie_sanders}, {party, democrat}]}]]).
+                           [[{candidate, 10, [{name, donald_trump}, {party, republican}, {gender, male}]}, 
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 30, [{name, ted_cruz}, {party, republican}, {gender, male}]}, 
+                             {candidate, 40, [{name, bernie_sanders}, {party, democrat}, {gender, male}]}]]).
 
 multi_update21(N1, N2) ->
   erlang_craq:multi_update([N1, N2],
-                           [[{candidate, 10, [{name, donald_trump}, {party, republican}]}, {candidate, 20, [{name, hillary_clinton}, {party, democrat}]}],
-                            [{candidate, 30, [{name, ted_cruz}, {party, republican}]}, {candidate, 20, [{name, hillary_clinton}, {party, democrat}]}]]).
+                           [[{candidate, 10, [{name, donald_trump}, {party, republican}, {gender, male}]}, 
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 30, [{name, ted_cruz}, {party, republican}, {gender, male}]}, 
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}]]).
 
 multi_update30(N1, N2, N3) ->
   erlang_craq:multi_update([N1, N2, N3],
-                           [[{candidate, 10, [{name, donald_trump}, {party, republican}]}, {candidate, 20, [{name, hillary_clinton}, {party, democrat}]}],
-                            [{candidate, 30, [{name, ted_cruz}, {party, republican}]}, {candidate, 40, [{name, bernie_sanders}, {party, democrat}]}],
-                            [{candidate, 50, [{name, marco_rubio}, {party, republican}]}, {candidate, 60, [{name, ben_carson}, {party, republican}]}]]).
+                           [[{candidate, 10, [{name, donald_trump}, {party, republican}, {gender, male}]}, 
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 30, [{name, ted_cruz}, {party, republican}, {gender, male}]}, 
+                             {candidate, 40, [{name, bernie_sanders}, {party, democrat}, {gender, male}]}],
+                            [{candidate, 50, [{name, marco_rubio}, {party, republican}, {gender, male}]}, 
+                             {candidate, 60, [{name, ben_carson}, {party, republican}, {gender, male}]}]]).
 
 multi_update31(N1, N2, N3) ->
   erlang_craq:multi_update([N1, N2, N3],
-                           [[{candidate, 10, [{name, donald_trump}, {party, republican}]}, {candidate, 20, [{name, hillary_clinton}, {party, democrat}]}],
-                            [{candidate, 30, [{name, ted_cruz}, {party, republican}]}, {candidate, 20, [{name, hillary_clinton}, {party, democrat}]}],
-                            [{candidate, 50, [{name, marco_rubio}, {party, republican}]}, {candidate, 60, [{name, ben_carson}, {party, republican}]}]]).
+                           [[{candidate, 10, [{name, donald_trump}, {party, republican}, {gender, male}]}, 
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 30, [{name, ted_cruz}, {party, republican}, {gender, male}]}, 
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 50, [{name, marco_rubio}, {party, republican}, {gender, male}]}, 
+                             {candidate, 60, [{name, ben_carson}, {party, republican}, {gender, male}]}]]).
 multi_update32(N1, N2, N3) ->
   erlang_craq:multi_update([N1, N2, N3],
-                           [[{candidate, 10, [{name, donald_trump}, {party, republican}]}, {candidate, 20, [{name, hillary_clinton}, {party, democrat}]}],
-                            [{candidate, 30, [{name, ted_cruz}, {party, republican}]}, {candidate, 20, [{name, hillary_clinton}, {party, democrat}]}],
-                            [{candidate, 50, [{name, marco_rubio}, {party, republican}]}, {candidate, 20, [{name, hillary_clinton}, {party, democrat}]}]]).
+                           [[{candidate, 10, [{name, donald_trump}, {party, republican}, {gender, male}]}, 
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 30, [{name, ted_cruz}, {party, republican}, {gender, male}]}, 
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 50, [{name, marco_rubio}, {party, republican}, {gender, male}]}, 
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}]]).
+
+delete2(N1) ->
+  erlang_craq:delete(N1,
+                     [{candidate, 10},
+                      {candidate, 20, [gender]},
+                      {candidate, 30, [party, gender]},
+                      {candidate, 40, [gender]}]).
+
