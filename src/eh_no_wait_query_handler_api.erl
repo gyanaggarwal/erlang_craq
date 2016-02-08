@@ -23,7 +23,7 @@
 -export([process/6]).
 
 process(ObjectType, ObjectId, _NodeId, From, Ref, State) ->
-  eh_query_hadler:reply(From, Ref, eh_query_handler:error_being_updated(ObjectType, ObjectId)),
+  eh_query_handler:reply(From, Ref, eh_query_handler:error_being_updated([{ObjectType, ObjectId, undefined}])),
   State.
 
 

@@ -25,7 +25,7 @@
 -include("erlang_craq.hrl").
 
 process(ObjectType, ObjectId, NodeId, From, Ref, #eh_system_state{repl_ring_order=ReplRingOrder, repl_ring=ReplRing, app_config=AppConfig}=State) ->
-  NodeOrder = eh_system_util:get_node_order(AppConfig),
+  NodeOrder = eh_system_config:get_node_order(AppConfig),
   Tail = eh_repl_ring:effective_tail_node_id(NodeId, ReplRing, ReplRingOrder, NodeOrder),
   eh_query_handler:process_tail(ObjectType, ObjectId, Tail, From, Ref, State).
 

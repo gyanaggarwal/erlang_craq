@@ -30,6 +30,18 @@
          multi_update31/3,
          multi_update32/3]).
 
+-export([demo_su1/1,
+         demo_su2/1,
+         demo_su3/1,
+         demo_mt4/1,
+         demo_mu5/3,
+         demo_mu6/3,
+         demo_mu7/3,
+         demo_stop8/1,
+         demo_su9/1,
+         demo_su10/1,
+         demo_add_node11/3]).
+
 -include("erlang_craq_test.hrl").
 
 update(0, _State) ->
@@ -139,3 +151,53 @@ delete2(N1) ->
                       {candidate, 30, [party, gender]},
                       {candidate, 40, [gender]}]).
 
+demo_su1(N1) ->
+  erlang_craq:update(N1, candidate, 10, [{name, donald_trump}, {party, republican}]).
+
+demo_su2(N1) ->
+  erlang_craq:update(N1, candidate, 20, [{name, hillary_clinton}, {party, democrat}]).
+
+demo_su3(N1) ->
+  erlang_craq:update(N1, candidate, 30, [{name, ted_cruz}, {party, republican}]).
+
+demo_mt4(N1) ->
+  erlang_craq:update(N1, [{candidate, 40, [{name, bernie_sanders}, {party, democrat}]},
+                          {candidate, 50, [{name, marco_rubio}, {party, republican}]}]).
+
+demo_mu5(N1, N2, N3) ->
+  erlang_craq:multi_update([N1, N2, N3],
+                           [[{candidate, 10, [{name, donald_trump}, {party, republican}, {gender, male}]},
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 30, [{name, ted_cruz}, {party, republican}, {gender, male}]},
+                             {candidate, 40, [{name, bernie_sanders}, {party, democrat}, {gender, male}]}],
+                            [{candidate, 50, [{name, marco_rubio}, {party, republican}, {gender, male}]},
+                             {candidate, 60, [{name, ben_carson}, {party, republican}, {gender, male}]}]]).
+
+demo_mu6(N1, N2, N3) ->
+  erlang_craq:multi_update([N1, N2, N3],
+                           [[{candidate, 10, [{name, donald_trump}, {party, republican}, {gender, male}]},
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 30, [{name, ted_cruz}, {party, republican}, {gender, male}]},
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 50, [{name, marco_rubio}, {party, republican}, {gender, male}]},
+                             {candidate, 60, [{name, ben_carson}, {party, republican}, {gender, male}]}]]).
+demo_mu7(N1, N2, N3) ->
+  erlang_craq:multi_update([N1, N2, N3],
+                           [[{candidate, 10, [{name, donald_trump}, {party, republican}, {gender, male}]},
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 30, [{name, ted_cruz}, {party, republican}, {gender, male}]},
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}],
+                            [{candidate, 50, [{name, marco_rubio}, {party, republican}, {gender, male}]},
+                             {candidate, 20, [{name, hillary_clinton}, {party, democrat}, {gender, female}]}]]).
+
+demo_stop8(N1) ->
+  erlang_craq:stop(N1).
+
+demo_su9(N1) ->
+  erlang_craq:update(N1, candidate, 80, [{name, chris_christie}, {party, republican}]).
+
+demo_su10(N1) ->
+  erlang_craq:update(N1, candidate, 90, [{name, jeb_bush}, {party, republican}]).
+  
+demo_add_node11(N1, NL, NLO) ->
+  erlang_craq:add_node(N1, NL, NLO).
