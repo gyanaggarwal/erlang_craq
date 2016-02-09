@@ -18,4 +18,4 @@
 
 {eh_test_util,      [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {erlang_craq_test,  [{i, "../include/"}, {outdir, "../ebin/"}]}.
-
+{erlang_craq_demo,  [{i, "../include/"}, {outdir, "../ebin/"}]}.
