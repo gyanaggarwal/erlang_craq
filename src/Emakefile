@@ -31,6 +31,7 @@
 {eh_event,                          [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {eh_event_handler,                  [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {eh_failure_detector_api,           [{i, "../include/"}, {outdir, "../ebin/"}]}.
+{eh_file_name,                      [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {eh_no_wait_query_handler_api,      [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {eh_node_state,                     [{i, "../include/"}, {outdir, "../ebin/"}]}.
 {eh_node_timestamp,                 [{i, "../include/"}, {outdir, "../ebin/"}]}.

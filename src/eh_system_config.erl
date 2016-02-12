@@ -27,7 +27,10 @@
          get_write_conflict_resolver/1,
          get_unique_id_generator/1,
          get_query_handler/1,
+	 get_data_checkpoint/1,
+	 get_data_dir/1,
          get_file_repl_data/1,
+	 get_file_repl_data_suffix/1,
          get_file_repl_log/1,
          get_debug_mode/1,
          get_sup_restart_intensity/1,
@@ -43,8 +46,10 @@
 -define(WRITE_CONFLICT_RESOLVER,   eh_write_conflict_resolver_api).
 -define(UNIQUE_ID_GENERATOR,       eh_unique_id_generator_api).
 -define(QUERY_HANDLER,             eh_no_wait_query_handler_api).
--define(DATA_DIR,                  "").
+-define(DATA_CHECKPOINT,           10000).
+-define(DATA_DIR,                  "./").
 -define(FILE_REPL_DATA,            "_repl.data").
+-define(FILE_REPL_DATA_SUFFIX,     "0000000000").
 -define(FILE_REPL_LOG,             standard_io).
 -define(DEBUG_MODE,                false).
 -define(SUP_RESTART_INTENSITY,     1).
@@ -67,8 +72,11 @@ get_env() ->
                  write_conflict_resolver  = eh_config:get_env(erlang_craq, write_conflict_resolver,  ?WRITE_CONFLICT_RESOLVER),
                  unique_id_generator      = eh_config:get_env(erlang_craq, unique_id_generator,      ?UNIQUE_ID_GENERATOR),
                  query_handler            = eh_config:get_env(erlang_craq, query_handler,            ?QUERY_HANDLER),
-                 file_repl_data           = eh_system_util:get_file_name(NodeName, DataDir, FileReplData),
-                 file_repl_log            = eh_system_util:get_file_name(NodeName, DataDir, FileReplLog),
+		 data_checkpoint          = eh_config:get_env(erlang_craq, data_checkpoint,          ?DATA_CHECKPOINT),
+		 data_dir                 = DataDir,
+                 file_repl_data           = eh_file_name:get_file_name(NodeName, FileReplData),
+		 file_repl_data_suffix    = eh_config:get_env(erlang_craq, file_repl_data_suffix,    ?FILE_REPL_DATA_SUFFIX),
+                 file_repl_log            = eh_file_name:get_full_file_name(DataDir, eh_file_name:get_file_name(NodeName, FileReplLog)),
                  debug_mode               = eh_config:get_env(erlang_craq, debug_mode,               ?DEBUG_MODE),
                  sup_restart_intensity    = eh_config:get_env(erlang_craq, sup_restart_intensity,    ?SUP_RESTART_INTENSITY),
                  sup_restart_period       = eh_config:get_env(erlang_craq, sup_restart_period,       ?SUP_RESTART_PERIOD),
@@ -106,9 +114,21 @@ get_unique_id_generator(#eh_app_config{unique_id_generator=UniqueIdGenerator}) -
 get_query_handler(#eh_app_config{query_handler=QueryHandler}) ->
   QueryHandler.
 
+-spec get_data_checkpoint(AppConfig :: #eh_app_config{}) -> non_neg_integer().
+get_data_checkpoint(#eh_app_config{data_checkpoint=DataCheckPoint}) ->
+    DataCheckPoint.
+
+-spec get_data_dir(AppConfig :: #eh_app_config{}) -> string().
+get_data_dir(#eh_app_config{data_dir=DataDir}) ->
+    DataDir.
+
 -spec get_file_repl_data(AppConfig :: #eh_app_config{}) -> string().
 get_file_repl_data(#eh_app_config{file_repl_data=FileReplData}) ->
   FileReplData.
+
+-spec get_file_repl_data_suffix(AppConfig :: #eh_app_config{}) -> string().
+get_file_repl_data_suffix(#eh_app_config{file_repl_data_suffix=FileReplDataSuffix}) ->
+    FileReplDataSuffix.
 
 -spec get_file_repl_log(AppConfig :: #eh_app_config{}) -> atom() | string().
 get_file_repl_log(#eh_app_config{file_repl_log=FileReplLog}) ->

@@ -21,7 +21,8 @@
 -export([open/1,
          close/1,
          read/2,
-         write/3]).
+	 read_all/2,
+         write/5]).
 
 -include("erlang_craq.hrl").
 
@@ -32,6 +33,20 @@ open(FileName) ->
 -spec close(File :: file:io_device()) -> ok | {error, atom()}.
 close(File) ->
   eh_persist_storage_data:close_data_file(File).
+
+-spec read_all(AppConfig :: #eh_app_config{}, FileNames :: list()) -> {ok | error, non_neg_integer(), list(), maps:map()}.
+read_all(AppConfig, FileNames) ->
+    EntryOperation = eh_system_config:get_storage_data(AppConfig),
+    read_all(EntryOperation, FileNames, {ok, 0, [], maps:new()}).
+
+-spec read_all(EntryOperation :: atom(), FileNames :: list(), Acc :: term()) -> {ok | error, non_neg_integer(), list(), maps:map()}.
+read_all(EntryOperation, [FileName | RFileNames], {_, Timestamp, DataIndex, M0}) ->
+    {ok, File} = open(FileName),
+    Acc = read(EntryOperation, File, 0, {Timestamp, DataIndex}, M0),
+    close(File),
+    read_all(EntryOperation, RFileNames, Acc);
+read_all(_EntryOperation, [], Acc) ->
+    Acc.
 
 -spec read(AppConfig :: #eh_app_config{}, File :: file:io_device()) ->  {ok | error, non_neg_integer(), list(), maps:map()}.
 read(AppConfig, File) ->
@@ -65,10 +80,27 @@ read(EntryOperation, File, Loc, {Timestamp, DataIndex}, M0) ->
       end
   end.
 
--spec write(AppConfig :: #eh_app_config{}, File :: file:io_device(), Q0 :: queue:queue()) -> ok | {error, atom()}.          
-write(AppConfig, File, Q0)->
- EntryOperation = eh_system_config:get_storage_data(AppConfig),
- write_entries(EntryOperation, File, Q0).
+-spec write(AppConfig :: #eh_app_config{}, File :: file:io_device(), Q0 :: queue:queue(), FileVersionNum :: non_neg_integer(), DataUpdateCount :: non_neg_integer()) 
+            -> {ok, file:io_device(), non_neg_integer(), non_neg_integer()} | {error, atom()}.          
+write(AppConfig, File, Q0, FileVersionNum, DataUpdateCount)->
+  EntryOperation = eh_system_config:get_storage_data(AppConfig),
+  write_entries(EntryOperation, File, Q0),
+  DataCheckPoint = eh_system_config:get_data_checkpoint(AppConfig),
+  case DataUpdateCount >= DataCheckPoint of
+    true  ->
+      case read(AppConfig, File) of
+        {ok, _, _, _}    ->
+          close(File),
+          FileVersionNum1 = FileVersionNum+1,
+          VersionedFileName = eh_file_name:get_full_versioned_file_name(FileVersionNum1, AppConfig),
+          {ok, File1} = open(VersionedFileName),
+          {ok, File1, FileVersionNum1, 0};
+        {error, _, _, _} ->
+          {error, File, FileVersionNum, DataUpdateCount+1}
+      end;
+    false ->
+      {ok, File, FileVersionNum, DataUpdateCount+1}
+  end.
 
 -spec write_entries(EntryOperation :: atom(), File :: file:io_device(), Q0 :: queue:queue()) -> ok | {error, atom()}.
 write_entries(EntryOperation, File, Q0) ->

@@ -32,9 +32,18 @@ start_link(AppConfig) ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [AppConfig], []).
 
 init([AppConfig]) ->
-  {ok, File} = eh_storage_data_operation_api:open(AppConfig#eh_app_config.file_repl_data),
-  {_, Timestamp, DataIndexList, D0} = eh_storage_data_operation_api:read(AppConfig, File), 
-  State = #eh_data_state{timestamp=Timestamp, data_index_list=DataIndexList, data=D0, file=File, app_config=AppConfig},
+  DataDir = eh_system_config:get_data_dir(AppConfig),
+  FileName = eh_system_config:get_file_repl_data(AppConfig),
+  {_, Timestamp, DataIndexList, D0} = eh_storage_data_operation_api:read_all(AppConfig, eh_file_name:get_full_versioned_file_names(DataDir, FileName)),
+  FileVersionNum = eh_file_name:get_version_num(DataDir, FileName)+1,
+  VersionedFileName = eh_file_name:get_full_versioned_file_name(FileVersionNum, AppConfig),
+  {ok, File} = eh_storage_data_operation_api:open(VersionedFileName),
+  State = #eh_data_state{timestamp=Timestamp, 
+			 data_index_list=DataIndexList, 
+			 data=D0, 
+			 file_version_num=FileVersionNum, 
+			 file=File, 
+			 app_config=AppConfig},
   {ok, State}.
 
 
@@ -68,19 +77,21 @@ handle_call({?EH_UPDATE, {?EH_NOT_READY, _Timestamp, _}},
 
 handle_call({?EH_UPDATE, {?EH_READY, Timestamp, UpdateList}}, 
             _From, 
-            #eh_data_state{file=File, data=Data, transient_data=TQ0, timestamp=StateTimestamp, data_index_list=StateDataIndexList, app_config=AppConfig}=State) ->
+            #eh_data_state{data=Data, 
+			   transient_data=TQ0, 
+			   timestamp=StateTimestamp, 
+			   data_index_list=StateDataIndexList}=State) ->
   {_, {_, DIL0}, Q0, D0} = eh_data_util:make_data(UpdateList, Timestamp, {StateTimestamp, StateDataIndexList}, TQ0, Data),
-  ok = eh_storage_data_operation_api:write(AppConfig, File, Q0),
-  State1 = State#eh_data_state{timestamp=Timestamp, data_index_list=DIL0, data=D0, transient_data=queue:new()},
-  {reply, ok, State1};
+  write_data(Timestamp, DIL0, D0, Q0, State);
 
 handle_call({?EH_UPDATE_SNAPSHOT, Qi0}, 
             _From, 
-            #eh_data_state{file=File, data=Data, transient_data=TData, timestamp=StateTimestamp, data_index_list=StateDataIndexList, app_config=AppConfig}=State) ->
+            #eh_data_state{data=Data, 
+			   transient_data=TData, 
+			   timestamp=StateTimestamp, 
+			   data_index_list=StateDataIndexList}=State) ->
   {Timestamp, DIL0, Q0, D0} = eh_data_util:merge_data(Qi0, TData, {StateTimestamp, StateDataIndexList}, Data),
-  ok = eh_storage_data_operation_api:write(AppConfig, File, Q0),
-  State1= State#eh_data_state{timestamp=Timestamp, data_index_list=DIL0, data=D0, transient_data=queue:new()},
-  {reply, ok, State1};
+  write_data(Timestamp, DIL0, D0, Q0, State);
 
 handle_call(?EH_DATA_VIEW, 
             _From, 
@@ -100,6 +111,8 @@ handle_call({?EH_CHECK_DATA, {Timestamp, DataList}},
   Reply = eh_data_util:check_data(Timestamp, DataList, Data),
   {reply, Reply, State}.
 
+handle_cast({stop, Reason}, State) ->
+  {stop, Reason, State};
 
 handle_cast(_Msg, State) ->
   {noreply, State}.
@@ -116,3 +129,23 @@ code_change(_OldVsn, State, _Extra) ->
 terminate(_Reason, #eh_data_state{file=File}) ->
   eh_storage_data_operation_api:close(File).
 
+write_data(Timestamp, DIL0, D0, Q0, 
+            #eh_data_state{file=File,
+                           file_version_num=FileVersionNum,
+                           data_update_count=DataUpdateCount,
+                           app_config=AppConfig}=State) ->
+    {Tag, File1, FileVersionNum1, DataUpdateCount1} = eh_storage_data_operation_api:write(AppConfig, File, Q0, FileVersionNum, DataUpdateCount),
+    State1 = State#eh_data_state{timestamp=Timestamp, 
+                                 file=File1,
+	                         file_version_num=FileVersionNum1,
+                                 data_update_count=DataUpdateCount1,
+                                 data_index_list=DIL0,
+                                 data=D0,
+			         transient_data=queue:new()},
+    case Tag of
+	ok ->
+	    {reply, ok, State1}; 
+	_  ->
+	    {stop, Tag, ok, State1}
+    end.
+      

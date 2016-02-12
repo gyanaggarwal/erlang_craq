@@ -20,7 +20,6 @@
 
 -export([get_node_name/1,
          get_node_atom/1,
-         get_file_name/3,
          make_list_to_string/2,
          new_set/0,
          size_set/1,
@@ -53,12 +52,6 @@ get_node_name(Node) ->
 -spec get_node_atom(Node :: atom()) -> atom().
 get_node_atom(Node) ->
   list_to_atom(get_node_name(Node)).
-
--spec get_file_name(NodeName :: string(), DataDir :: string(), FileName :: string() | atom()) -> string() | atom().
-get_file_name(_, _, standard_io) ->
-  standard_io;
-get_file_name(NodeName, DataDir, FileName) ->
-  DataDir ++ NodeName ++ FileName.
 
 make_list_to_string(Fun, List) ->
   lists:foldl(fun(N, Acc) -> case length(Acc) of

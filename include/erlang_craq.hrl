@@ -70,6 +70,9 @@
                                  write_conflict_resolver             :: atom(),
                                  unique_id_generator                 :: atom(),
                                  query_handler                       :: atom(),
+				 data_checkpoint=0                   :: non_neg_integer(),
+				 data_dir                            :: string(),
+				 file_repl_data_suffix               :: string(),
                                  file_repl_data                      :: string(),
                                  file_repl_log                       :: standard_io | string(),
                                  debug_mode=false                    :: true | false,
@@ -126,6 +129,8 @@
                                  data_index_list=[]                  :: list(),
                                  data=maps:new()                     :: maps:map(),
                                  transient_data=queue:new()          :: queue:queue(),
+				 data_update_count=0                 :: non_neg_integer(),
+				 file_version_num=0                  :: non_neg_integer(),
                                  file                                :: file:io_device(),
                                  app_config                          :: #eh_app_config{}}).
 
