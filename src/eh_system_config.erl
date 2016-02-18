@@ -27,6 +27,7 @@
          get_write_conflict_resolver/1,
          get_unique_id_generator/1,
          get_query_handler/1,
+	 get_event_logger/1,
 	 get_data_checkpoint/1,
 	 get_data_dir/1,
          get_file_repl_data/1,
@@ -46,6 +47,7 @@
 -define(WRITE_CONFLICT_RESOLVER,   eh_write_conflict_resolver_api).
 -define(UNIQUE_ID_GENERATOR,       eh_unique_id_generator_api).
 -define(QUERY_HANDLER,             eh_no_wait_query_handler_api).
+-define(EVENT_LOGGER,              ?LAGER_EVENT).
 -define(DATA_CHECKPOINT,           10000).
 -define(DATA_DIR,                  "./").
 -define(FILE_REPL_DATA,            "_repl.data").
@@ -72,6 +74,7 @@ get_env() ->
                  write_conflict_resolver  = eh_config:get_env(erlang_craq, write_conflict_resolver,  ?WRITE_CONFLICT_RESOLVER),
                  unique_id_generator      = eh_config:get_env(erlang_craq, unique_id_generator,      ?UNIQUE_ID_GENERATOR),
                  query_handler            = eh_config:get_env(erlang_craq, query_handler,            ?QUERY_HANDLER),
+		 event_logger             = eh_config:get_env(erlang_craq, event_logger,             ?EVENT_LOGGER),
 		 data_checkpoint          = eh_config:get_env(erlang_craq, data_checkpoint,          ?DATA_CHECKPOINT),
 		 data_dir                 = DataDir,
                  file_repl_data           = eh_file_name:get_file_name(NodeName, FileReplData),
@@ -113,6 +116,10 @@ get_unique_id_generator(#eh_app_config{unique_id_generator=UniqueIdGenerator}) -
 -spec get_query_handler(AppConfig :: #eh_app_config{}) -> atom().
 get_query_handler(#eh_app_config{query_handler=QueryHandler}) ->
   QueryHandler.
+
+-spec get_event_logger(AppConfig :: #eh_app_config{}) -> atom().
+get_event_logger(#eh_app_config{event_logger=EventLogger}) ->
+  EventLogger.
 
 -spec get_data_checkpoint(AppConfig :: #eh_app_config{}) -> non_neg_integer().
 get_data_checkpoint(#eh_app_config{data_checkpoint=DataCheckPoint}) ->

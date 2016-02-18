@@ -24,6 +24,8 @@
 
 -export([init/1, handle_call/2, handle_info/2, handle_event/2, terminate/2, code_change/3]).
 
+-export([get_msg_data/1]).
+
 -include("erlang_craq.hrl").
 
 add_handler(AppConfig) ->
@@ -56,11 +58,14 @@ handle_call(_Request, State) ->
 handle_info(_Info, State) ->
   {ok, State}.
 
-handle_event({data_state, {Module, Msg, #eh_data_state{timestamp=Timestamp, data_index_list=DIList}}}, File) ->
-  io:fwrite(File, "[~p] ~p timestamp=~p, data_index_list=~p~n", [Module, Msg, Timestamp, DIList]),
-  {ok, File};
+handle_event({Fmt, Args}, File) ->
+    io:fwrite(File, Fmt, Args),
+    {ok, File}.
 
-handle_event({state, {Module, Msg, StateData=#eh_system_state{}}}, File) ->
+get_msg_data({data_state, {Module, Msg, #eh_data_state{timestamp=Timestamp, data_index_list=DIList}}}) ->
+  {"[~p] ~p timestamp=~p, data_index_list=~p~n", [Module, Msg, Timestamp, DIList]};
+
+get_msg_data({state, {Module, Msg, StateData}}) ->
   NodeId = eh_system_util:get_node_name(StateData#eh_system_state.app_config#eh_app_config.node_id),
   Pred = eh_system_util:get_node_name(StateData#eh_system_state.predecessor),
   Succ = eh_system_util:get_node_name(StateData#eh_system_state.successor),
@@ -69,22 +74,17 @@ handle_event({state, {Module, Msg, StateData=#eh_system_state{}}}, File) ->
   ReplRing = eh_system_util:make_list_to_string(fun eh_system_util:get_node_name/1, StateData#eh_system_state.repl_ring),
   PreMsgData = list_msg_map(StateData#eh_system_state.pre_msg_data),
   MsgData = list_msg_map(StateData#eh_system_state.msg_data),
-  PendingPreMsgData = list_msg_map(StateData#eh_system_state.pending_pre_msg_data),
   CSet = list_msg_set_value(StateData#eh_system_state.completed_set),
-  io:fwrite(File, "[~p] ~p node_status=~p, node_id=~p, repl_ring=~p, pred=~p, succ=~p, timestamp=~p, pre_msg_data=~p, msg_data=~p, completed_set=~p, pending_pre_msg_data=~p~n~n",
-            [Module, Msg, NodeState, NodeId, ReplRing, Pred, Succ, Timestamp, PreMsgData, MsgData, CSet, PendingPreMsgData]),
-  {ok, File};
+  {"[~p] ~p node_status=~p, node_id=~p, repl_ring=~p, pred=~p, succ=~p, timestamp=~p, pre_msg_data=~p, msg_data=~p, completed_set=~p~n",
+   [Module, Msg, NodeState, NodeId, ReplRing, Pred, Succ, Timestamp, PreMsgData, MsgData, CSet]};
 
-handle_event({message, {Module, Msg, {UMsgList, CompletedSet}}}, File) ->
+get_msg_data({message, {Module, Msg, {UMsgList, CompletedSet}}}) ->
   RCSet = list_msg_set_value(CompletedSet),
   UMList = list_msg_list(UMsgList),
-  io:fwrite(File, "[~p] ~p message=~p, completed_set=~p~n",
-             [Module, Msg, UMList, RCSet]),
-  {ok, File};
+  {"[~p] ~p message=~p, completed_set=~p~n", [Module, Msg, UMList, RCSet]};
 
-handle_event({data, {Module, Msg, DataMsg, Data}}, File) ->
-  io:fwrite(File, "[~p] ~p ~p=~p~n", [Module, Msg, DataMsg, Data]),
-  {ok, File}.
+get_msg_data({data, {Module, Msg, {DataMsg, Data}}}) ->
+  {"[~p] ~p ~p=~p~n", [Module, Msg, DataMsg, Data]}.
 
 is_listable_value(Value) ->
   is_atom(Value) orelse is_integer(Value) orelse is_float(Value) orelse is_list(Value).

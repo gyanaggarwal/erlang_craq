@@ -66,7 +66,7 @@ handle_cast({?EH_SETUP_REPL, ReplRing},
   {Timestamp, _} = ReplDataManager:timestamp(),
   NewState1 = eh_node_state:update_state_ready(State),
   NewState2 = NewState1#eh_system_state{repl_ring_order=ReplRingOrder1, repl_ring=ReplRing1, predecessor=Pred, successor=Succ, timestamp=Timestamp},
-  event_state("setup_repl.99", NewState2),
+  event_state("setup_repl.99", NewState2, AppConfig),
   {noreply, NewState2};
 
 handle_cast({?EH_ADD_NODE, {Node, NodeList, NodeOrderList}}, 
@@ -87,7 +87,7 @@ handle_cast({?EH_ADD_NODE, {Node, NodeList, NodeOrderList}},
                 _                      ->
                   State
               end,
-  event_state("add_node.99", NewState9),
+  event_state("add_node.99", NewState9, AppConfig),
   {noreply, NewState9};
 
 handle_cast({?EH_SNAPSHOT, {Node, NodeList, NodeOrderList,  Ref, {Timestamp, Snapshot}}}, 
@@ -100,7 +100,7 @@ handle_cast({?EH_SNAPSHOT, {Node, NodeList, NodeOrderList,  Ref, {Timestamp, Sna
   PendingPreMsgMap = eh_update_msg:filter_effective_head_node_id(PreMsgData, State),
   gen_server:cast({?EH_SYSTEM_SERVER, Node}, {?EH_UPDATE_SNAPSHOT, {Ref, Q0, PendingPreMsgMap}}),
   NewState2 = State#eh_system_state{repl_ring_order=NodeOrderList1, repl_ring=NodeList1, predecessor=Pred1, successor=Succ1},
-  event_state("snapshot.99", NewState2),
+  event_state("snapshot.99", NewState2, AppConfig),
   {noreply, NewState2};
 
 handle_cast({?EH_UPDATE_SNAPSHOT, {Ref, Q0, PendingPreMsgData}}, 
@@ -115,7 +115,7 @@ handle_cast({?EH_UPDATE_SNAPSHOT, {Ref, Q0, PendingPreMsgData}},
                        end,
   NewState2 = eh_node_state:update_state_snapshot(State),
   NewState3 = NewState2#eh_system_state{pending_pre_msg_data=PendingPreMsgData1},
-  event_state("update_snapshot.99", NewState3),
+  event_state("update_snapshot.99", NewState3, AppConfig),
   {noreply, NewState3};
 
 handle_cast({?EH_UPDATE_SNAPSHOT, _}, State) ->
@@ -157,7 +157,10 @@ handle_cast({?EH_QUERY_AQ, {ObjectType, ObjectId, From, Ref}},
   {noreply, State1};
 
 handle_cast({?EH_UPDATE, {From, Ref, ObjectList}},
-            #eh_system_state{timestamp=Timestamp, successor=Succ, completed_set=CompletedSet, app_config=AppConfig}=State) ->
+            #eh_system_state{timestamp=Timestamp, 
+			     successor=Succ, 
+			     completed_set=CompletedSet, 
+			     app_config=AppConfig}=State) ->
   NodeId = eh_system_config:get_node_id(AppConfig),
   NewState9 = case eh_node_state:client_state(State) of
                 ?EH_NOT_READY ->
@@ -179,7 +182,7 @@ handle_cast({?EH_UPDATE, {From, Ref, ObjectList}},
                       send_pre_update_msg(fun eh_persist_data:no_persist_data/2, UMsgList, CompletedSet, NewState1)
                   end                            
               end,
-  event_state("update.99", NewState9),
+  event_state("update.99", NewState9, AppConfig),
   {noreply, NewState9};
 
 handle_cast({?EH_PRED_PRE_UPDATE, {UMsgList, CompletedSet}}, State) ->
@@ -206,8 +209,8 @@ handle_cast({?EH_SUCC_UPDATE, {UMsgList, CompletedSet}}, State) ->
                           State),
   {noreply, NewState1};
 
-handle_cast({stop, Reason}, State) ->
-  event_data("stop", status, stopped),
+handle_cast({stop, Reason}, #eh_system_state{app_config=AppConfig}=State) ->
+  event_data("stop", status, stopped, AppConfig),
   {stop, Reason, State};
 
 handle_cast(_Msg, State) ->
@@ -215,11 +218,17 @@ handle_cast(_Msg, State) ->
 
 
 handle_info(Msg, 
-            #eh_system_state{repl_ring=ReplRing, repl_ring_order=ReplRingOrder, predecessor=Pred, successor=Succ, pre_msg_data=PreMsgData, msg_data=MsgData, app_config=AppConfig}=State) ->
+            #eh_system_state{repl_ring=ReplRing, 
+			     repl_ring_order=ReplRingOrder, 
+			     predecessor=Pred, 
+			     successor=Succ, 
+			     pre_msg_data=PreMsgData, 
+			     msg_data=MsgData, 
+			     app_config=AppConfig}=State) ->
   FailureDetector = eh_system_config:get_failure_detector(AppConfig),
   NewState9 = case FailureDetector:detect(Msg) of
                 {?EH_NODEDOWN, DownNode} ->
-                  event_data("failure", node_down, eh_system_util:get_node_name(DownNode)),
+                  event_data("failure", node_down, eh_system_util:get_node_name(DownNode), AppConfig),
                   NodeId = eh_system_config:get_node_id(AppConfig),
                   NodeOrder = eh_system_config:get_node_order(AppConfig),
                   {NewReplRing, _} = eh_repl_ring:drop(DownNode, ReplRing, ReplRingOrder, NodeOrder),
@@ -250,7 +259,7 @@ handle_info(Msg,
                                 {_, _, _, _} ->
                                   NewState1  
                               end,
-                  event_state("failure.99", NewState3),
+                  event_state("failure.99", NewState3, AppConfig),
                   NewState3;
                 _                        ->
                   State 
@@ -263,14 +272,14 @@ code_change(_OldVsn, State, _Extra) ->
 terminate(_Reason, _State) ->
   ok.
 
-event_state(Msg, State) ->
-  eh_event:state(?MODULE, Msg, State).
+event_state(Msg, State, AppConfig) ->
+  eh_event:state(?MODULE, Msg, State, AppConfig).
 
-event_message(Msg, MsgList, CompletedSet) ->
-  eh_event:message(?MODULE, Msg, {MsgList, CompletedSet}).
+event_message(Msg, MsgList, CompletedSet, AppConfig) ->
+  eh_event:message(?MODULE, Msg, {MsgList, CompletedSet}, AppConfig).
 
-event_data(Msg, DataMsg, Data) ->
-  eh_event:data(?MODULE, Msg, DataMsg, Data).
+event_data(Msg, DataMsg, Data, AppConfig) ->
+  eh_event:data(?MODULE, Msg, {DataMsg, Data}, AppConfig).
 
 reply_to_client(PersistFun,
                 UMsgList,
@@ -317,36 +326,36 @@ process_msg(Tag,
             ValidMsgPersistFun,
             UMsgList,
             CompletedSet,
-            State) ->
+            #eh_system_state{app_config=AppConfig}=State) ->
   DisplayTag = eh_system_util:display_atom_to_list(Tag),
   {MsgTimestamp, _, _, _} = eh_update_msg:get_msg_param(UMsgList),
   NewState8 = case eh_node_state:msg_state(State) of
                 ?EH_NOT_READY ->
-                  event_message(DisplayTag++".invalid_msg", UMsgList, CompletedSet),
+                  event_message(DisplayTag++".invalid_msg", UMsgList, CompletedSet, AppConfig),
                   State;
                 _             ->
                   case ValidateMsgFun(UMsgList, State) of
                     {false, _, NewState1}           ->
-                      event_message(DisplayTag++".duplicate_msg", UMsgList, CompletedSet),
+                      event_message(DisplayTag++".duplicate_msg", UMsgList, CompletedSet, AppConfig),
                       NewState1;
                     {true, ?EH_HEAD_MSG, NewState1} ->
-                      event_message(DisplayTag++".valid_head_msg", UMsgList, CompletedSet),
+                      event_message(DisplayTag++".valid_head_msg", UMsgList, CompletedSet, AppConfig),
                       NewState2 = eh_node_timestamp:update_state_timestamp(MsgTimestamp, NewState1),
                       NewState3 = eh_node_timestamp:update_state_completed_set(CompletedSet, NewState2),
                       ReturnedMsgFun(ReturnedMsgPersistFun, UMsgList, CompletedSet, NewState3);
                     {true, ?EH_TAIL_MSG, NewState1} ->
-                      event_message(DisplayTag++".valid_tail_msg", UMsgList, CompletedSet),
+                      event_message(DisplayTag++".valid_tail_msg", UMsgList, CompletedSet, AppConfig),
                       NewState2 = eh_node_timestamp:update_state_timestamp(MsgTimestamp, NewState1),
                       NewState3 = eh_node_timestamp:update_state_msg_data(CompletedSet, NewState2),
                       ReturnedMsgFun(ReturnedMsgPersistFun, UMsgList, CompletedSet, NewState3);
                     {true, _, NewState1}            ->
-                      event_message(DisplayTag++".valid_ring_msg", UMsgList, CompletedSet),
+                      event_message(DisplayTag++".valid_ring_msg", UMsgList, CompletedSet, AppConfig),
                       NewState2 = eh_node_timestamp:update_state_timestamp(MsgTimestamp, NewState1),
                       NewState3 = eh_node_timestamp:update_state_msg_data(CompletedSet, NewState2),
                       ValidMsgFun(ValidMsgPersistFun, UMsgList, CompletedSet, NewState3)
                   end
               end,
-  event_state(DisplayTag++".99", NewState8),
+  event_state(DisplayTag++".99", NewState8, AppConfig),
   NewState8.
 
 process_snapshot_request(NodeList, NodeOrderList, Succ, #eh_system_state{app_config=AppConfig}=State) ->

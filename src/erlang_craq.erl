@@ -35,10 +35,11 @@
 -include("erlang_craq.hrl").
 
 start() ->
+  lager:start(),
   application:start(erlang_craq).
 
 stop() ->
-  application:stop(erlang_craq).
+    application:stop(erlang_craq).
 
 setup_repl(NodeList) ->
   gen_server:abcast(NodeList, ?EH_SYSTEM_SERVER, {?EH_SETUP_REPL, NodeList}).

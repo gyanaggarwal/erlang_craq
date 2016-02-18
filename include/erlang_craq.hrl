@@ -62,6 +62,9 @@
 -define(EH_SYSTEM_SERVER,          eh_system_server).
 -define(EH_DATA_SERVER,            eh_data_server).
 
+-define(GEN_EVENT,                 gen_event).
+-define(LAGER_EVENT,               lager_event).
+
 -record(eh_app_config,          {node_id                             :: atom(),
                                  node_order                          :: ?EH_SORTED | ?EH_USER_DEFINED,
                                  failure_detector                    :: atom(),
@@ -70,6 +73,7 @@
                                  write_conflict_resolver             :: atom(),
                                  unique_id_generator                 :: atom(),
                                  query_handler                       :: atom(),
+				 event_logger                        :: ?GEN_EVENT | ?LAGER_EVENT,
 				 data_checkpoint=0                   :: non_neg_integer(),
 				 data_dir                            :: string(),
 				 file_repl_data_suffix               :: string(),

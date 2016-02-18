@@ -20,7 +20,9 @@
 
 -export([start_link/0, add_handler/2, delete_handler/2]).
 
--export([data/4, state/3, data_state/3, message/3]).
+-export([data/4, state/4, data_state/4, message/4]).
+
+-include("erlang_craq.hrl").
 
 -define(SERVER, ?MODULE).
 
@@ -33,18 +35,24 @@ add_handler(Handler, Args) ->
 delete_handler(Handler, Args) ->
   gen_event:delete_handler(?SERVER, Handler, Args).
 
-event_notify(Tag, Event) ->
-  gen_event:notify(?SERVER, {Tag, Event}).
+event_notify(Tag, Event, AppConfig) ->
+  {Fmt, Args} = eh_event_handler:get_msg_data({Tag, Event}),
+  case eh_system_config:get_event_logger(AppConfig) of
+    ?GEN_EVENT -> 
+	  gen_event:notify(?SERVER, {Fmt, Args});
+    _          ->
+	  lager:log(info, '', Fmt, Args)
+  end.
 
-state(Module, Msg, State) ->
-  event_notify(state, {Module, Msg, State}).
+state(Module, Msg, State, AppConfig) ->
+  event_notify(state, {Module, Msg, State}, AppConfig).
 
-data_state(Module, Msg, State) ->
-  event_notify(data_state, {Module, Msg, State}).
+data_state(Module, Msg, State, AppConfig) ->
+  event_notify(data_state, {Module, Msg, State}, AppConfig).
 
-message(Module, Msg, Message) ->
-  event_notify(message, {Module, Msg, Message}).
+message(Module, Msg, Message, AppConfig) ->
+  event_notify(message, {Module, Msg, Message}, AppConfig).
 
-data(Module, Msg, DataMsg, Data) ->
-  event_notify(data, {Module, Msg, DataMsg, Data}).
+data(Module, Msg, {DataMsg, Data}, AppConfig) ->
+  event_notify(data, {Module, Msg, {DataMsg, Data}}, AppConfig).
 
