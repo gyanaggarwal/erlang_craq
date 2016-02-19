@@ -176,10 +176,15 @@ valid_pre_update_msg(UMsgList,
             State).
 
 check_data(UMsgList,
-           #eh_system_state{app_config=AppConfig}) ->
-  {Timestamp, _, _, _, DataList} = eh_update_msg:get_data_list(UMsgList),
-  ReplDataManager = eh_system_config:get_repl_data_manager(AppConfig),
-  ReplDataManager:check_data({Timestamp, DataList}).
+           #eh_system_state{timestamp=Timestamp, app_config=AppConfig}) ->
+  {MsgTimestamp, _, _, _, DataList} = eh_update_msg:get_data_list(UMsgList),
+  case Timestamp >= MsgTimestamp of
+    true  -> 
+      ReplDataManager = eh_system_config:get_repl_data_manager(AppConfig),
+      ReplDataManager:check_data({MsgTimestamp, DataList});
+    false ->
+      false
+  end.
 
 check_map(UMsgList, MsgMap) ->
   {Timestamp, _, MsgNodeId, _} = eh_update_msg:get_msg_param(UMsgList),
