@@ -48,18 +48,24 @@ update_state_remove_query_data(ObjectType, ObjectId, #eh_system_state{query_data
   State#eh_system_state{query_data=eh_system_util:remove_map({ObjectType, ObjectId}, QueryData)}.
 
 update_state_client_reply(UMsgList, 
-                          #eh_system_state{successor=Succ, completed_set=CompletedSet, pre_msg_data=PreMsgData}=State) ->
+                          #eh_system_state{successor=Succ, completed_set=CompletedSet, pre_msg_data=PreMsgData, msg_data=MsgData}=State) ->
   {PreMsgData1, CompletedSet1} = lists:foldl(fun({UMsgKeyX, _}, {MsgDataX, CompletedSetX}) -> 
                                              {eh_system_util:remove_map(UMsgKeyX, MsgDataX), eh_system_util:add_set(UMsgKeyX, CompletedSetX)} end,
                                              {PreMsgData, CompletedSet},
-                                             UMsgList),                              
- CompletedSet2 = case Succ of
+                                             UMsgList),
+  {MsgData1, CompletedSet2} = lists:foldl(fun({UMsgKeyX, _}, {MsgDataX, CompletedSetX}) -> 
+                                             {eh_system_util:remove_map(UMsgKeyX, MsgDataX), eh_system_util:add_set(UMsgKeyX, CompletedSetX)} end,
+                                             {MsgData, CompletedSet1},
+                                             UMsgList),
+                              
+  CompletedSet3 = case Succ of
                     undefined ->
                        CompletedSet;
                     _         ->
-                       CompletedSet1
-                 end,
-  State#eh_system_state{completed_set=CompletedSet2, pre_msg_data=PreMsgData1}.
+                       CompletedSet2
+                  end,
+
+  State#eh_system_state{completed_set=CompletedSet3, pre_msg_data=PreMsgData1, msg_data=MsgData1}.
 
 update_state_completed_set(CompletedSet, 
                            #eh_system_state{completed_set=NewCompletedSet}=State) ->
